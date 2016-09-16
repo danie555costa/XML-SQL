@@ -24,8 +24,8 @@ public class ViewLog extends javax.swing.JFrame implements OnPrint{
         
         
         this.log = new Log(System.out);
-        System.setOut(log);
-        System.setErr(log);
+//        System.setOut(log);
+//        System.setErr(log);
         
         log.setOnPrint(this);
     }
