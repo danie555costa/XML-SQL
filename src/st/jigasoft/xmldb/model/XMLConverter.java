@@ -20,15 +20,21 @@ import java.util.Map;
 public class XMLConverter implements Converter{
     
    
-    private OnProcess onProcess;
+    private OnProcess onProcessReader;
+    private OnProcess onProcessWrite;
     
     public XMLConverter ()
     {
     }
     
-    public void setOnProcess(OnProcess onProcess)
+    public void setOnProcessReader(OnProcess onProcess)
     {
-        this.onProcess = onProcess;
+        this.onProcessReader = onProcess;
+    }
+    
+    public void setOnProcessWrite(OnProcess onProcess)
+    {
+        this.onProcessWrite = onProcess;
     }
    
     
@@ -38,6 +44,16 @@ public class XMLConverter implements Converter{
     @Override
     public void marshal(Object o, HierarchicalStreamWriter writer, MarshallingContext mc)
     {
+        SQLRow row = (SQLRow) o;
+        for(String s: row.getCollumns()){
+            writer.startNode(s);
+            Object value = row.get(s);
+            writer.setValue(value == null? "": value.toString());
+            writer.endNode();
+        }
+        
+        if(onProcessWrite != null)
+            onProcessWrite.accept(row);
     }
 
     @Override
@@ -54,7 +70,7 @@ public class XMLConverter implements Converter{
             reader.moveUp();      
             lLine.put(field, value);
         }
-        if(this.onProcess != null) this.onProcess.accept(lLine);
+        if(this.onProcessReader != null) this.onProcessReader.accept(lLine);
         
         return lLine;
     }

@@ -5,7 +5,6 @@
  */
 package st.jigasoft.xmldb.model;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -75,20 +74,8 @@ public class SQLRow implements ItemTableModel
         this.mapValues.replace(column, value);
     }
 
-   
-    
-    private String getKeyAt(int index)
-    {
-        int iCount =0;
-        for(String key: this.getCollumns())
-            if((iCount ++) == index) return key;
-        return null;
-            
-    }
-
     void replace(String columnKey, Object object) {
         this.mapValues.replace(columnKey, object);
     }
-    
     
 }

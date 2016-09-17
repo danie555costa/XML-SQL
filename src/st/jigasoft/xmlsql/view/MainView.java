@@ -7,11 +7,16 @@ package st.jigasoft.xmlsql.view;
 
 import com.thoughtworks.xstream.XStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.Connection;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileFilter;
 import st.jigasoft.dbutil.util.FilterableTableModel;
 import st.jigasoft.dbutil.util.text.XTextName;
@@ -42,10 +47,11 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
     private final XMLConverter converter;
     private int iCountRow;
     private final SQLHeader header;
-    private ArrayList<SQLRow> list;
+    private List<SQLRow> list;
     private Thread currentBackgroundProcess;
     private FilterableTableModel tableModel;
     private ViewLog viewLog;
+    private int iCountWrite;
     
     
     /**
@@ -59,7 +65,7 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
         this.xStream = new XStream();
         xStream.registerConverter(this.converter = new XMLConverter());
         
-        this.converter.setOnProcess(this);
+        this.converter.setOnProcessReader(this);
         this.header = new SQLHeader();
         this.tableModel = new FilterableTableModel();
         this.header.addTreaterValue(new TreaterNull());
@@ -83,7 +89,10 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
             public boolean accept(File f) {
                 String name = f.getName();
                 return (name.length() >=5 &&
-                        name.substring(name.length()-3, name.length()).toUpperCase().equals("XML"))
+                        (
+                           name.substring(name.length()-3, name.length()).toUpperCase().equals("XML")
+                           ||name.substring(name.length()-3, name.length()).toUpperCase().equals("LXS")
+                        ))
                         
                         || f.isDirectory();
            
@@ -92,7 +101,7 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
             @Override
             public String getDescription() 
             {
-                return ".XML";
+                return "(.XML, LXS)";
             }
         });
         CollumnView comp;
@@ -126,6 +135,7 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
         editHostName = new st.jigasoft.dbutil.view.EditText();
         editPassWord = new st.jigasoft.dbutil.view.EditText();
         editDocument = new st.jigasoft.dbutil.view.EditText();
+        jButton5 = new javax.swing.JButton();
         jSplitPane1 = new javax.swing.JSplitPane();
         jPanel3 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
@@ -137,6 +147,7 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
         progressValues = new javax.swing.JLabel();
         progressName = new javax.swing.JLabel();
         jButton4 = new javax.swing.JButton();
+        jButton6 = new javax.swing.JButton();
         fiterableTable1 = new st.jigasoft.dbutil.view.FiterableTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -177,7 +188,7 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
         jButton3.setBackground(new java.awt.Color(255, 25, 0));
         jButton3.setFont(new java.awt.Font("Monospace Medium", 1, 14)); // NOI18N
         jButton3.setForeground(java.awt.Color.white);
-        jButton3.setText("DATA BASE SAVE");
+        jButton3.setText("SAVE DB");
         jButton3.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton3ActionPerformed(evt);
@@ -193,6 +204,13 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
         editDocument.setText("HF_DOCUMENT");
         editDocument.setTextHint(RText.DOCUMMENT_LIST);
 
+        jButton5.setText("XML");
+        jButton5.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton5ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -202,7 +220,7 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(editDocument, javax.swing.GroupLayout.PREFERRED_SIZE, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(editXMLTag, javax.swing.GroupLayout.PREFERRED_SIZE, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(editTableName, javax.swing.GroupLayout.PREFERRED_SIZE, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -212,37 +230,42 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
                         .addComponent(edFileLocation, javax.swing.GroupLayout.PREFERRED_SIZE, 621, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jButton1)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(38, 38, 38)
                 .addComponent(editHostName, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(editUserDataBaseName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(editPassWord, javax.swing.GroupLayout.DEFAULT_SIZE, 160, Short.MAX_VALUE))
-                .addGap(18, 18, 18)
+                    .addComponent(editPassWord, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(jButton3)
-                .addGap(6, 6, 6))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jButton3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addGroup(jPanel1Layout.createSequentialGroup()
+                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                .addComponent(editUserDataBaseName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(editHostName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(editPassWord, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(jPanel1Layout.createSequentialGroup()
+                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                 .addComponent(edFileLocation, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addComponent(jButton1))
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                .addComponent(editUserDataBaseName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(editHostName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(editXMLTag, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(editTableName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jButton2)
-                            .addComponent(editPassWord, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(editDocument, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addComponent(jButton3, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                .addComponent(editXMLTag, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(editTableName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(jButton2)
+                                .addComponent(editDocument, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                    .addComponent(jButton5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -261,7 +284,7 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 312, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 330, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(panelTreater1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(8, 8, 8))
@@ -282,18 +305,27 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
             }
         });
 
+        jButton6.setText("X");
+        jButton6.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton6ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addComponent(jButton4)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 357, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 312, Short.MAX_VALUE)
                 .addComponent(progressName)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(progressValues, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addComponent(processProgress, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jButton6)
                 .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
@@ -301,6 +333,7 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jButton6)
                     .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(progressValues)
                         .addComponent(progressName)
@@ -378,6 +411,14 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
         this.logCall();
     }//GEN-LAST:event_jButton4ActionPerformed
 
+    private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
+        this.saveXML();
+    }//GEN-LAST:event_jButton5ActionPerformed
+
+    private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
+        this.cansel();
+    }//GEN-LAST:event_jButton6ActionPerformed
+
    
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -393,6 +434,8 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
     private javax.swing.JButton jButton2;
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
+    private javax.swing.JButton jButton5;
+    private javax.swing.JButton jButton6;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
@@ -443,9 +486,15 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
             @Override
             public void run() {
                 if(list != null) list.clear();
-                list = (ArrayList) xStream.fromXML(file);
-                processProgress.setIndeterminate(false);
-                currentBackgroundProcess = null;
+                Object object = xStream.fromXML(file);
+                System.out.println("object has instace of "+object.getClass());
+                if(object instanceof List)
+                {
+                    list = (List) object;
+                    processProgress.setIndeterminate(false);
+                    currentBackgroundProcess = null;
+                }
+                else JOptionPane.showMessageDialog(MainView.this, "O xml nao é uma heraca da listam ");
             }
         });
         
@@ -506,8 +555,12 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
     }
 
     private void saveDataBase() {
-        
-        Thread thread = new Thread(new Runnable() {
+        if(currentBackgroundProcess != null
+                && currentBackgroundProcess.isAlive())
+        {
+            currentBackgroundProcess.interrupt();
+        }
+        this.currentBackgroundProcess = new Thread(new Runnable() {
 
             @Override
             public void run() {
@@ -550,12 +603,78 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
                 conexao.closeConect();
             }
         });
-        thread.start();
+        this.currentBackgroundProcess.start();
         
     }
 
     private void logCall() {
         this.viewLog.setVisible(!this.viewLog.isVisible());
+    }
+
+    private void saveXML() {
+        final NumberFormat formatter = NumberFormat.getInstance();
+        formatter.setMaximumFractionDigits(2);
+        formatter.setMinimumIntegerDigits(1);
+         this.iCountWrite = 0;
+         this.processProgress.setValue(0);
+         this.processProgress.setMaximum(this.list.size());
+         this.processProgress.setStringPainted(true);
+         this.processProgress.setIndeterminate(false);
+         progressName.setText(RText.PROCCESSED+":");
+         
+         this.converter.setOnProcessWrite(new OnProcess() {
+
+             @Override
+             public void accept(SQLRow t) {
+                 System.out.println(t);
+                 iCountWrite ++;
+                 processProgress.setValue(iCountWrite);
+                 String textFormatter =  formatter.format(processProgress.getPercentComplete()*100);
+                 
+                 processProgress.setString(textFormatter+"%");
+                 progressValues.setText(list.size()+"/"+iCountWrite);
+             }
+         });
+         this.processProgress.setValue(0);
+         this.processProgress.setStringPainted(false);
+         
+         if(currentBackgroundProcess != null
+                && currentBackgroundProcess.isAlive())
+        {
+            currentBackgroundProcess.interrupt();
+        }
+        this.currentBackgroundProcess = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try 
+                {
+                    
+                    String tablename = editTableName.getText();
+                    File file = choser.getCurrentDirectory();
+                    File fileOutXML = new File(file, tablename+".LXS");
+                    FileOutputStream out;
+                    xStream.toXML(list, out = new FileOutputStream(fileOutXML, false));
+                    out.close();
+                } catch (FileNotFoundException ex) {
+                    Logger.getLogger(MainView.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(MainView.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+        this.currentBackgroundProcess.start();
+    }
+
+    private void cansel() {
+         if(currentBackgroundProcess != null
+                && currentBackgroundProcess.isAlive())
+        {
+            currentBackgroundProcess.interrupt();
+        }
+         currentBackgroundProcess = null;
+         
+         this.progressValues.setText("");
+         this.processProgress.setValue(0);
     }
 }
 
