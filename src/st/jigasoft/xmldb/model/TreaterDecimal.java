@@ -10,7 +10,6 @@ package st.jigasoft.xmldb.model;
  * @author xdata
  */
 public class TreaterDecimal extends TypeTreat<Float> {
-
     public TreaterDecimal()
     {
         super("DECIMAL");
@@ -31,6 +30,4 @@ public class TreaterDecimal extends TypeTreat<Float> {
                 && value instanceof String
                 && value.toString().length()>0;
     }
-
-    
 }
