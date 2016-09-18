@@ -7,7 +7,10 @@ package st.jigasoft.xmldb.connect;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.Timer;
 
 /**
@@ -40,7 +43,7 @@ public final class Conexao {
         caminhoBD = "jdbc:oracle:thin:@192.168.2.99:1521:XE";
         nomeBD = "CREDIAL";
         senhaBd = "1234";
-        connect();
+        createNewConnection();
 
     }
     
@@ -49,32 +52,26 @@ public final class Conexao {
        caminhoBD ="jdbc:oracle:thin:@"+hostName+":1521:XE";
        nomeBD = userName;
        senhaBd = pwdName;
-       connect();
+       createNewConnection();
     }
 
-    private void connect() {
+    public  void createNewConnection() {
         try
         {
-            System.err.println(caminhoBD +" Caminho");
             Class.forName("oracle.jdbc.driver.OracleDriver");
             this.conexao = DriverManager.getConnection(caminhoBD,nomeBD,senhaBd);
             EstadoConnexao.isValid = true;
-                
+            this.connectado = true;
+            System.err.println("Connectado");
         }
         catch (Exception e) 
         {
-            // System.out.println("Tentativa de conexa falhada");
+            System.err.println("Tentativa de conexa falhada");
+            e.printStackTrace();
             this.caminhoBD = null;
             this.nomeBD = null;
             this.senhaBd = null;
             Conexao.vetConect = null;
-        }
-        try 
-        {
-            statement = conexao.createStatement();
-            connectado = true;
-        } catch (Exception e) {
-        
         }
     }
 
@@ -85,6 +82,17 @@ public final class Conexao {
      */
     public Connection getCon() {
         return this.conexao;
+    }
+    
+    public boolean isConnected(){
+        try {
+            return this.connectado
+                    && this.conexao != null;
+        } catch (Exception ex) {
+            Logger.getLogger(Conexao.class.getName()).log(Level.SEVERE, null, ex);
+            ex.printStackTrace();
+        }
+        return false;
     }
 
 

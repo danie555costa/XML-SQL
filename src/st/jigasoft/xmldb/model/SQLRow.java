@@ -77,5 +77,9 @@ public class SQLRow implements ItemTableModel
     void replace(String columnKey, Object object) {
         this.mapValues.replace(columnKey, object);
     }
+
+    public int getColumnsCount() {
+        return this.mapValues.size();
+    }
     
 }
