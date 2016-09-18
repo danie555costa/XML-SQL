@@ -95,14 +95,7 @@ public class SQLHeader {
     }
 
     public Object[] prepare(SQLRow sqll)  {
-        Object values [] = new Object[this.mapCollumns.size()];
-         Set<String> list = this.mapCollumns.keySet();
-         int count = 0;
-         for(String coll: list)
-         {
-             values[count++] = sqll.get(coll);
-         }
-        return values;
+        return this.treat(sqll);
     }
 
     public String [] columnAsTable() {
@@ -113,10 +106,13 @@ public class SQLHeader {
         return collumn;
     }
 
-    public void treat(SQLRow sqll) {
+    public Object [] treat(SQLRow sqll) {
+        Object[] rowObj = new Object[this.mapCollumns.size()];
         Object object;
+        int iCount =0;
         for(String columnKey: this.mapCollumns.keySet())
         {
+            
             Column column = this.mapCollumns.get(columnKey);
             TypeTreat treater = (TypeTreat) column.getType();
             
@@ -131,7 +127,8 @@ public class SQLHeader {
             if(treater.accept(columnKey, object))
                 object = treater.treater(object);
             
-            sqll.replace(columnKey, object);
+            rowObj[iCount ++] = object;
         }
+        return  rowObj;
     }
 }

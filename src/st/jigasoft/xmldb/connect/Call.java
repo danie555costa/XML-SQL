@@ -34,6 +34,7 @@ public class Call
     public static int INTEGER = Types.INTEGER;
     public static int DOUBLE = Types.DOUBLE;
     public static int ARRAY = Types.ARRAY;  
+    public static String lastMessage;
     
     
     
@@ -203,12 +204,12 @@ public class Call
         try 
         {
             String sql = inSQL;
-            try (CallableStatement call = mapParamsType(connection, sql, 1, param))
-            {
-                call.execute();
-            }
+            CallableStatement call = mapParamsType(connection, sql, 1, param);
+            call.execute();
+            call.closeOnCompletion();
             return true;
         } catch (Exception e) {
+            Call.lastMessage = e.getMessage();
             e.printStackTrace();
             return false;
         }
@@ -339,16 +340,16 @@ public class Call
     /**
      * Essta funcao serve para mapear um tipo de java com um tipo de base de dados
      *      Desde que o dipo de java seja herance de SQLData
-     * @param connect A conexao que sera usada para mapear os tipos
+     * @param connection A conexao que sera usada para mapear os tipos
      * @param parans Os parametros que poderam ser mapeados
      * @return A conexao mapeada
      */
     @SuppressWarnings("CallToPrintStackTrace")
-    private static CallableStatement mapParamsType (Connection connect, String sql, int initParam, Object ... parans )
+    private static CallableStatement mapParamsType (Connection connection, String sql, int initParam, Object ... parans )
     {
         try
         {
-            CallableStatement call = connect.prepareCall(sql);
+            CallableStatement call = connection.prepareCall(sql);
             System.out.println(sql);
             if (parans != null && parans.length >0)
             {
@@ -361,16 +362,16 @@ public class Call
                             try 
                             {
                                 SQLData sqlMap = (SQLData) obj ;
-                                connect.getTypeMap().put(sqlMap.getSQLTypeName(), sqlMap.getClass());
+                                connection.getTypeMap().put(sqlMap.getSQLTypeName(), sqlMap.getClass());
                             } catch (Exception ex)
                             {
                                 Logger.getLogger(Call.class.getName()).log(Level.SEVERE, null, ex);
                             }
                         }
                         else if (obj  instanceof Object []) 
-                            obj  =  createSQLArrayVarchar((Object[]) obj, connect, null);
+                            obj  =  createSQLArrayVarchar((Object[]) obj, connection, null);
                         else if (obj  instanceof Collection)
-                            obj = createSQLArrayVarchar(((Collection) obj).toArray(), connect, null);
+                            obj = createSQLArrayVarchar(((Collection) obj).toArray(), connection, null);
                         else if (obj instanceof java.util.Date)
                             obj = OperacaoData.toSQLDate((java.util.Date) obj);
                         else if (obj instanceof Character)

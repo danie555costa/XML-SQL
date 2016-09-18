@@ -11,6 +11,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -564,43 +566,83 @@ public class MainView extends javax.swing.JFrame implements OnProcess{
 
             @Override
             public void run() {
-                String host = editHostName.getText();
-                String userDataBaseName = editUserDataBaseName.getText();
-                String passWord = editPassWord.getText();
+                Connection dataBaseConnection = null;
+                Savepoint savepoint = null;
                 
-                header.replaceTableName(editTableName.getText());
-                header.generateInsertSQL();
-                System.out.println(header.getSql());
-                int treatRow = 0;
-                processProgress.setMaximum(iCountRow);
-                
-                progressName.setText(RText.PROCCESSED+":");
-                processProgress.setStringPainted(true);
-                
-                NumberFormat formatter = NumberFormat.getInstance();
-                formatter.setMaximumFractionDigits(2);
-                formatter.setMinimumIntegerDigits(1);
-                
-                Conexao conexao = new Conexao(host, userDataBaseName, passWord);
-                
-                Connection dataBaseConnection = conexao.getCon();
-                
-                
-                for(SQLRow sqll: list)
+                try 
                 {
-                    header.treat(sqll);
+                    String host = editHostName.getText();
+                    String userDataBaseName = editUserDataBaseName.getText();
+                    String passWord = editPassWord.getText();
                     
-                    //TODO salvar qui no banco de dados
+                    header.replaceTableName(editTableName.getText());
+                    header.generateInsertSQL();
+                    System.out.println(header.getSql());
+                    int treatRow = 0;
+                    processProgress.setMaximum(iCountRow);
                     
-                   Call.callStattment(header.getSql(), dataBaseConnection, header.prepare(sqll));
+                    progressName.setText(RText.PROCCESSED+":");
+                    processProgress.setStringPainted(true);
                     
-                    treatRow ++;
-                    processProgress.setValue(treatRow);
-                    progressValues.setText(treatRow+"/"+iCountRow);
-                    String textFormatter =  formatter.format(processProgress.getPercentComplete()*100);
-                    processProgress.setString(textFormatter+"%");
+                    NumberFormat formatter = NumberFormat.getInstance();
+                    formatter.setMaximumFractionDigits(2);
+                    formatter.setMinimumIntegerDigits(1);
+                    
+                    Conexao conexao = new Conexao(host, userDataBaseName, passWord);
+                    dataBaseConnection = conexao.getCon();
+                    dataBaseConnection.setAutoCommit(false);
+                    
+                    savepoint = dataBaseConnection.setSavepoint();
+                    
+                    if(!conexao.isConnected())
+                    {
+                        JOptionPane.showMessageDialog(MainView.this, "Falha ao connectar com a base de dados");
+                    }
+                    else
+                    {
+                        int auxCount = 0;
+                        for(SQLRow sqll: list)
+                        {
+                            if(auxCount == 100){
+                                dataBaseConnection.commit();
+                                conexao.closeConect();
+                                conexao.createNewConnection();
+                                dataBaseConnection = conexao.getCon();
+                                dataBaseConnection.setAutoCommit(false);
+                                auxCount = 0;
+                            }
+
+                            //TODO salvar qui no banco de dados
+                            boolean reg = Call.callStattment(header.getSql(), dataBaseConnection, header.prepare(sqll));
+                            if(!reg)
+                            {
+                                JOptionPane.showMessageDialog(MainView.this, "Falha ao salvar no banco de dados\nOperacao abortada\nError:"+Call.lastMessage);
+                                dataBaseConnection.rollback(savepoint);
+                                break;
+                            }
+                            treatRow ++;
+                            processProgress.setValue(treatRow);
+                            progressValues.setText(treatRow+"/"+iCountRow);
+                            String textFormatter =  formatter.format(processProgress.getPercentComplete()*100);
+                            processProgress.setString(textFormatter+"%");
+                            auxCount ++;
+                        }
+                        dataBaseConnection.commit();
+                        conexao.closeConect();
+                    }
+                } catch (Exception ex) {
+                    Logger.getLogger(MainView.class.getName()).log(Level.SEVERE, null, ex);
+                    JOptionPane.showMessageDialog(MainView.this, "Catch error\nFalha ao salvar no banco de dados\nError:"+ex.getMessage());
+                    if(dataBaseConnection != null)
+                    {
+                        try 
+                        {
+                            dataBaseConnection.rollback(savepoint);
+                        } catch (SQLException ex1) {
+                            Logger.getLogger(MainView.class.getName()).log(Level.SEVERE, null, ex1);
+                        }
+                    }
                 }
-                conexao.closeConect();
             }
         });
         this.currentBackgroundProcess.start();
